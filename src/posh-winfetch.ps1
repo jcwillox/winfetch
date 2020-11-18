@@ -68,10 +68,6 @@ param(
 
 $e = [char]0x1B
 
-$colorBar = ('{0}[0;40m{1}{0}[0;41m{1}{0}[0;42m{1}{0}[0;43m{1}' +
-            '{0}[0;44m{1}{0}[0;45m{1}{0}[0;46m{1}{0}[0;47m{1}' +
-            '{0}[0m') -f $e, '   '
-
 $is_pscore = $PSVersionTable.PSEdition.ToString() -eq 'Core'
 
 $configdir = $env:XDG_CONFIG_HOME, "${env:USERPROFILE}\.config" | Select-Object -First 1
@@ -108,73 +104,61 @@ if ($genconf) {
 
 
 # ===== VARIABLES =====
-$disabled = 'disabled'
 $cimSession = New-CimSession
-$strings = @{
-    title    = ''
-    dashes   = ''
-    img      = ''
-    os       = ''
-    hostname = ''
-    username = ''
-    computer = ''
-    uptime   = ''
-    terminal = ''
-    cpu      = ''
-    gpu      = ''
-    memory   = ''
-    disk     = ''
-    pwsh     = ''
-    pkgs     = ''
-}
 
 
 # ===== CONFIGURATION =====
-[Flags()]
-enum Configuration
-{
-    None          = 0
-    Show_Title    = 1
-    Show_Dashes   = 2
-    Show_OS       = 4
-    Show_Computer = 8
-    Show_Uptime   = 16
-    Show_Terminal = 32
-    Show_CPU      = 64
-    Show_GPU      = 128
-    Show_Memory   = 256
-    Show_Disk     = 512
-    Show_Pwsh     = 1024
-    Show_Pkgs     = 2048
-}
-[Configuration]$configuration = if ((Get-Item -Path $configPath).Length -gt 0) {
-    . $configPath
+$defaultconfig = @(
+    "title"
+    "dashes"
+    "os"
+    "computer"
+    "uptime"
+    "pkgs"
+    "pwsh"
+    "terminal"
+    "cpu"
+    "gpu"
+    "memory"
+    "disk"
+    "blank"
+    "colorbar"
+)
+
+if ((Get-Item -Path $configPath).Length -gt 0) {
+    $config = . $configPath
 } else {
-    0xFFF
+    $config = $defaultconfig
+}
+
+# convert old config
+if ($config.GetType() -eq [string]) {
+    $oldConfig = $config.ToLower()
+    $config = $defaultconfig | Where-Object {$_ -in @("blank","colorbar") -or $oldConfig.Contains($_)}
 }
 
 
 # ===== IMAGE =====
 $img = if (-not $image -and -not $noimage) {
     @(
-        "${e}[1;34m                    ....,,:;+ccllll${e}[0m"
-        "${e}[1;34m      ...,,+:;  cllllllllllllllllll${e}[0m"
-        "${e}[1;34m,cclllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34m                                   ${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34m``'ccllllllllll  lllllllllllllllllll${e}[0m"
-        "${e}[1;34m      ``' \\*::  :ccllllllllllllllll${e}[0m"
-        "${e}[1;34m                       ````````''*::cll${e}[0m"
-        "${e}[1;34m                                 ````${e}[0m"
+        " ${e}[1;34m                    ....,,:;+ccllll${e}[0m"
+        " ${e}[1;34m      ...,,+:;  cllllllllllllllllll${e}[0m"
+        " ${e}[1;34m,cclllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34m                                   ${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34mllllllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34m``'ccllllllllll  lllllllllllllllllll${e}[0m"
+        " ${e}[1;34m      ``' \\*::  :ccllllllllllllllll${e}[0m"
+        " ${e}[1;34m                       ````````''*::cll${e}[0m"
+        " ${e}[1;34m                                 ````${e}[0m"
     )
 }
 elseif (-not $noimage -and $image) {
@@ -229,64 +213,79 @@ else {
 }
 
 
-# ===== OS =====
-$strings.os = if ($configuration.HasFlag([Configuration]::Show_OS)) {
-    if ($IsWindows -or $PSVersionTable.PSVersion.Major -eq 5) {
-        $os = Get-CimInstance -ClassName Win32_OperatingSystem -Property Caption,OSArchitecture,Version -CimSession $cimSession
-        "$($os.Caption.TrimStart('Microsoft ')) [$($os.OSArchitecture)] ($($os.Version))"
-    } else {
-        ($PSVersionTable.OS).TrimStart('Microsoft ')
-    }
-} else {
-    $disabled
+# ===== BLANK =====
+function info_blank {
+    return @{}
 }
 
 
-# ===== HOSTNAME =====
-$strings.hostname = $env:COMPUTERNAME
+# ===== COLORBAR =====
+function info_colorbar {
+    return @{
+        title = ""
+        content = ('{0}[0;40m{1}{0}[0;41m{1}{0}[0;42m{1}{0}[0;43m{1}' +
+        '{0}[0;44m{1}{0}[0;45m{1}{0}[0;46m{1}{0}[0;47m{1}' +
+        '{0}[0m') -f $e, '   '
+    }
+}
 
 
-# ===== USERNAME =====
-$strings.username = [Environment]::UserName
+# ===== OS =====
+function info_os {
+    return @{
+        title = "OS"
+        content = if ($IsWindows -or $PSVersionTable.PSVersion.Major -eq 5) {
+            $os = Get-CimInstance -ClassName Win32_OperatingSystem -Property Caption,OSArchitecture,Version -CimSession $cimSession
+            "$($os.Caption.TrimStart('Microsoft ')) [$($os.OSArchitecture)] ($($os.Version))"
+        } else {
+            ($PSVersionTable.OS).TrimStart('Microsoft ')
+        }
+    }
+}
 
 
 # ===== TITLE =====
-$strings.title = if ($configuration.HasFlag([Configuration]::Show_Title)) {
-    "${e}[1;34m{0}${e}[0m@${e}[1;34m{1}${e}[0m" -f $strings['username', 'hostname']
-} else {
-    $disabled
+function info_title {
+    return @{
+        title = ""
+        content = "${e}[1;34m{0}${e}[0m@${e}[1;34m{1}${e}[0m" -f [Environment]::UserName,$env:COMPUTERNAME
+    }
 }
 
 
 # ===== DASHES =====
-$strings.dashes = if ($configuration.HasFlag([Configuration]::Show_Dashes)) {
-    -join $(for ($i = 0; $i -lt ('{0}@{1}' -f $strings['username', 'hostname']).Length; $i++) { '-' })
-} else {
-    $disabled
+function info_dashes {
+    $length = [Environment]::UserName.Length + $env:COMPUTERNAME.Length + 1
+    return @{
+        title = ""
+        content = "-" * $length
+    }
 }
 
 
 # ===== COMPUTER =====
-$strings.computer = if ($configuration.HasFlag([Configuration]::Show_Computer)) {
+function info_computer {
     $compsys = Get-CimInstance -ClassName Win32_ComputerSystem -Property Manufacturer,Model -CimSession $cimSession
-    '{0} {1}' -f $compsys.Manufacturer, $compsys.Model
-} else {
-    $disabled
+    return @{
+        title = "Host"
+        content = '{0} {1}' -f $compsys.Manufacturer, $compsys.Model
+    }
 }
 
 
 # ===== UPTIME =====
-$strings.uptime = if ($configuration.HasFlag([Configuration]::Show_Uptime)) {
-    $(switch ((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem -Property LastBootUpTime -CimSession $cimSession).LastBootUpTime) {
-        ({ $PSItem.Days -eq 1 }) { '1 day' }
-        ({ $PSItem.Days -gt 1 }) { "$($PSItem.Days) days" }
-        ({ $PSItem.Hours -eq 1 }) { '1 hour' }
-        ({ $PSItem.Hours -gt 1 }) { "$($PSItem.Hours) hours" }
-        ({ $PSItem.Minutes -eq 1 }) { '1 minute' }
-        ({ $PSItem.Minutes -gt 1 }) { "$($PSItem.Minutes) minutes" }
-    }) -join ' '
-} else {
-    $disabled
+function info_uptime {
+    @{
+        title = "Uptime"
+        content = $(switch ((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem -Property LastBootUpTime -CimSession $cimSession).LastBootUpTime) {
+            ({ $PSItem.Days -eq 1 }) { '1 day' }
+            ({ $PSItem.Days -gt 1 }) { "$($PSItem.Days) days" }
+            ({ $PSItem.Hours -eq 1 }) { '1 hour' }
+            ({ $PSItem.Hours -gt 1 }) { "$($PSItem.Hours) hours" }
+            ({ $PSItem.Minutes -eq 1 }) { '1 minute' }
+            ({ $PSItem.Minutes -gt 1 }) { "$($PSItem.Minutes) minutes" }
+        }) -join ' '
+    }
 }
 
 
@@ -294,7 +293,10 @@ $strings.uptime = if ($configuration.HasFlag([Configuration]::Show_Uptime)) {
 # this section works by getting
 # the parent processes of the
 # current powershell instance.
-$strings.terminal = if ($configuration.HasFlag([Configuration]::Show_Terminal) -and $is_pscore) {
+function info_terminal {
+    if (-not $is_pscore) {
+        return @{}
+    }
     $parent = (Get-Process -Id $PID).Parent
     for () {
         if ($parent.ProcessName -in 'powershell', 'pwsh', 'winpty-agent', 'cmd', 'zsh', 'bash') {
@@ -304,65 +306,74 @@ $strings.terminal = if ($configuration.HasFlag([Configuration]::Show_Terminal) -
         break
     }
     try {
-        switch ($parent.ProcessName) {
+        $terminal = switch ($parent.ProcessName) {
             'explorer' { 'Windows Console' }
             default { $PSItem }
         }
     } catch {
-        $parent.ProcessName
+        $terminal = $parent.ProcessName
     }
-} else {
-    $disabled
+
+    return @{
+        title = "Terminal"
+        content = $terminal
+    }
 }
 
 
 # ===== CPU/GPU =====
-$strings.cpu = if ($configuration.HasFlag([Configuration]::Show_CPU)) {
-    (Get-CimInstance -ClassName Win32_Processor -Property Name -CimSession $cimSession).Name
-} else {
-    $disabled
+function info_cpu {
+    return @{
+        title = "CPU"
+        content = (Get-CimInstance -ClassName Win32_Processor -Property Name -CimSession $cimSession).Name
+    }
 }
 
-$strings.gpu = if ($configuration.HasFlag([Configuration]::Show_GPU)) {
-    (Get-CimInstance -ClassName Win32_VideoController -Property Name -CimSession $cimSession).Name
-} else {
-    $disabled
+function info_gpu {
+    return @{
+        title = "GPU"
+        content = (Get-CimInstance -ClassName Win32_VideoController -Property Name -CimSession $cimSession).Name
+    }
 }
+
 
 
 # ===== MEMORY =====
-$strings.memory = if ($configuration.HasFlag([Configuration]::Show_Memory)) {
+function info_memory {
     $m = Get-CimInstance -ClassName Win32_OperatingSystem -Property TotalVisibleMemorySize,FreePhysicalMemory -CimSession $cimSession
     $total = $m.TotalVisibleMemorySize / 1mb
     $used = ($m.TotalVisibleMemorySize - $m.FreePhysicalMemory) / 1mb
-    ("{0:f1} GiB / {1:f1} GiB" -f $used,$total)
-} else {
-    $disabled
+    return @{
+        title = "Memory"
+        content = ("{0:f1} GiB / {1:f1} GiB" -f $used, $total)
+    }
 }
 
 
 # ===== DISK USAGE =====
-$strings.disk = if ($configuration.HasFlag([Configuration]::Show_Disk)) {
+function info_disk {
     $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DeviceID="C:"' -Property Size,FreeSpace -CimSession $cimSession
     $total = [math]::floor(($disk.Size / 1gb))
     $used = [math]::floor((($disk.FreeSpace - $total) / 1gb))
     $usage = [math]::floor(($used / $total * 100))
-    ("{0}GiB / {1}GiB ({2}%)" -f $used,$total,$usage)
-} else {
-    $disabled
+    return @{
+        title = "Disk (C:)"
+        content = ("{0}GiB / {1}GiB ({2}%)" -f $used,$total,$usage)
+    }
 }
 
 
 # ===== POWERSHELL VERSION =====
-$strings.pwsh = if ($configuration.HasFlag([Configuration]::Show_Pwsh)) {
-    "PowerShell v$($PSVersionTable.PSVersion)"
-} else {
-    $disabled
+function info_pwsh {
+    return @{
+        title = "PowerShell"
+        content = "PowerShell v$($PSVersionTable.PSVersion)"
+    }
 }
 
 
 # ===== PACKAGES =====
-$strings.pkgs = if ($configuration.HasFlag([Configuration]::Show_Pkgs)) {
+function info_pkgs {
     $chocopkg = if (Get-Command -Name choco -ErrorAction Ignore) {
         (& clist -l)[-1].Split(' ')[0] - 1
     }
@@ -373,69 +384,65 @@ $strings.pkgs = if ($configuration.HasFlag([Configuration]::Show_Pkgs)) {
         (Get-ChildItem -Path $scoopdir -Directory).Count - 1
     }
 
-    $(if ($scooppkg) {
-        "$scooppkg (scoop)"
+    return @{
+        title = "Packages"
+        content = $(if ($scooppkg) {
+            "$scooppkg (scoop)"
+        }
+        if ($chocopkg) {
+            "$chocopkg (choco)"
+        }) -join ', '
     }
-    if ($chocopkg) {
-        "$chocopkg (choco)"
-    }) -join ', '
-} else {
-    $disabled
 }
 
 
 # reset terminal sequences and display a newline
 Write-Output "${e}[0m"
 
-# add system info into an array
-$info = [collections.generic.list[string[]]]::new()
-$info.Add(@("", $strings.title))
-$info.Add(@("", $strings.dashes))
-$info.Add(@("OS", $strings.os))
-$info.Add(@("Host", $strings.computer))
-$info.Add(@("Uptime", $strings.uptime))
-$info.Add(@("Packages", $strings.pkgs))
-$info.Add(@("PowerShell", $strings.pwsh))
-$info.Add(@("Terminal", $strings.terminal))
-$info.Add(@("CPU", $strings.cpu))
-$info.Add(@("GPU", $strings.gpu))
-$info.Add(@("Memory", $strings.memory))
-$info.Add(@("Disk (C:)", $strings.disk))
-$info.Add(@("", ""))
-$info.Add(@("", $colorBar))
+# write logo
+Write-Output $img
 
-# write system information in a loop
-$counter = 0
-$logoctr = 0
-while ($counter -lt $info.Count) {
-    $logo_line = $img[$logoctr]
-    $item_title = "$e[1;34m$($info[$counter][0])$e[0m"
-    $item_content = if (($info[$counter][0]) -eq '') {
-            $($info[$counter][1])
-        } else {
-            ": $($info[$counter][1])"
-        }
-
-    if ($item_content -notlike '*disabled') {
-        Write-Output " ${logo_line}$e[40G${item_title}${item_content}"
-    }
-
-    $counter++
-    if ($item_content -notlike '*disabled') {
-        $logoctr++
-    }
+# write system information
+if ($img) {
+    # move cursor to top of image and to column 40
+    [Console]::Write("$e[$($img.Length)A$e[40G")
 }
 
-# print the rest of the logo
-if ($logoctr -lt $img.Count) {
-    while ($logoctr -le $img.Count) {
-        " $($img[$logoctr])"
-        $logoctr++
+foreach ($item in $config) {
+    # NOTE: I'm assuming that the info segment exists
+    # and intensionally powershell will display an
+    # error if it does not
+
+    $info = & "info_$item"
+
+    $output = "$e[1;34m$($info.title)$e[0m"
+
+    if ($info.title -and $info.content) {
+        $output += ": "
     }
+
+    $output += $info.content
+
+    # NOTE: we have to print it out like this for the cursor
+    # to visually stay on column 40, which looks a lot better
+
+    $output += "`n"
+
+    if ($img) {
+        # move cursor to column 40
+        $output += "$e[40G"
+    }
+
+    [Console]::Write($output)
 }
 
-# print a newline
-Write-Output ""
+if ($img) {
+    # move cursor back to the bottom
+    [Console]::Write("$e[$($img.Length - $config.Length)B")
+}
+
+# print 2 newlines
+Write-Output "`n"
 
 #  ___ ___  ___
 # | __/ _ \| __|
